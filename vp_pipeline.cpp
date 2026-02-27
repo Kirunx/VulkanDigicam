@@ -202,4 +202,7 @@ PipelineConfigInfo VpPipeline::defaultPipelineConfigInfo(uint32_t width,
 
     return configInfo;
 }
+void VpPipeline::bind(VkCommandBuffer commandBuffer){
+    vkCmdBindPipeline(commandBuffer,VK_PIPELINE_BIND_POINT_GRAPHICS,graphicsPipeline);
+}
 }  // namespace vp
