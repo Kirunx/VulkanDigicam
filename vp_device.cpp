@@ -531,4 +531,4 @@ void VpDevice::createImageWithInfo(
   }
 }
 
-}  // namespace lve
+}  // namespace vp

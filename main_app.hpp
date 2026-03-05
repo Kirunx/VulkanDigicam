@@ -7,6 +7,7 @@
 #include "vp_pipeline.hpp"
 #include "vp_swap_chain.hpp"
 #include "vp_window.hpp"
+#include "vp_model.hpp"
 
 namespace vp {
 class MainApp {
@@ -23,6 +24,7 @@ class MainApp {
     void run();
 
    private:
+    void loadModels();
     void createPipelineLayout();
     void createPipeline();
     void createCommandBuffers();
@@ -34,5 +36,6 @@ class MainApp {
     std::unique_ptr<VpPipeline> vpPipeline;
     VkPipelineLayout pipelineLayout;
     std::vector<VkCommandBuffer> commandBuffers;
+    std::unique_ptr<VpModel> vpModel;
 };
 }  // namespace vp
