@@ -13,13 +13,11 @@ class VpModel {
    public:
 	struct Vertex {
 		glm::vec2 position;
+        glm::vec3 color;
 
 		static std::vector<VkVertexInputBindingDescription> getBindingDesctriptions();
 		static std::vector<VkVertexInputAttributeDescription> getAttributeDesctriptions();
 	};
-
-
-
 
     VpModel(VpDevice &device,const std::vector<Vertex> &vertices);
     ~VpModel();

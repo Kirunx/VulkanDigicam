@@ -28,11 +28,14 @@ class MainApp {
     void createPipelineLayout();
     void createPipeline();
     void createCommandBuffers();
+    void freeCommandBuffers();
     void drawFrame();
+    void recreateSwapChain();
+    void recordCommandBuffer(int imageIndex);
 
     VpWindow vpWindow{WIDTH, HEIGHT, "Hello Vulkan!"};
     VpDevice vpDevice{vpWindow};
-    VpSwapChain vpSwapChain{vpDevice, vpWindow.getExtent()};
+    std::unique_ptr<VpSwapChain> vpSwapChain;
     std::unique_ptr<VpPipeline> vpPipeline;
     VkPipelineLayout pipelineLayout;
     std::vector<VkCommandBuffer> commandBuffers;
