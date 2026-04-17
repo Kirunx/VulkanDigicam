@@ -4,14 +4,14 @@
 #include <vector>
 
 #include "vp_device.hpp"
+#include "vp_game_object.hpp"
 #include "vp_pipeline.hpp"
 #include "vp_swap_chain.hpp"
 #include "vp_window.hpp"
-#include "vp_model.hpp"
 
 namespace vp {
 class MainApp {
-   public:
+public:
     static constexpr int WIDTH = 800;
     static constexpr int HEIGHT = 600;
 
@@ -23,8 +23,8 @@ class MainApp {
 
     void run();
 
-   private:
-    void loadModels();
+private:
+    void loadGameObjects();
     void createPipelineLayout();
     void createPipeline();
     void createCommandBuffers();
@@ -32,13 +32,14 @@ class MainApp {
     void drawFrame();
     void recreateSwapChain();
     void recordCommandBuffer(int imageIndex);
+    void renderGameObjects(VkCommandBuffer commandBuffer);
 
-    VpWindow vpWindow{WIDTH, HEIGHT, "Hello Vulkan!"};
-    VpDevice vpDevice{vpWindow};
+    VpWindow vpWindow { WIDTH, HEIGHT, "Hello Vulkan!" };
+    VpDevice vpDevice { vpWindow };
     std::unique_ptr<VpSwapChain> vpSwapChain;
     std::unique_ptr<VpPipeline> vpPipeline;
     VkPipelineLayout pipelineLayout;
     std::vector<VkCommandBuffer> commandBuffers;
-    std::unique_ptr<VpModel> vpModel;
+    std::vector<VpGameObject> gameObjects;
 };
-}  // namespace vp
+} // namespace vp

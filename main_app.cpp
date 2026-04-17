@@ -1,11 +1,26 @@
 #include "main_app.hpp"
 
+// libs
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+
+// std
 #include <array>
+#include <iostream>
 #include <stdexcept>
+
 namespace vp {
 
+struct SimplePushConstantData {
+    glm::mat2 transform{1.0f};
+    glm::vec2 offset;
+    alignas(16) glm::vec3 color;
+};
+
 MainApp::MainApp() {
-    loadModels();
+    loadGameObjects();
     createPipelineLayout();
     recreateSwapChain();
     createCommandBuffers();
@@ -15,6 +30,8 @@ MainApp::~MainApp() {
     vkDestroyPipelineLayout(vpDevice.device(), pipelineLayout, nullptr);
 }
 void MainApp::run() {
+    std::cout << "maxPushConstantSize = " << vpDevice.properties.limits.maxPushConstantsSize << '\n';
+
     while (!vpWindow.shouldClose()) {
         glfwPollEvents();
         drawFrame();
@@ -22,23 +39,36 @@ void MainApp::run() {
     vkDeviceWaitIdle(vpDevice.device());
 }
 
-void MainApp::loadModels() {
+void MainApp::loadGameObjects() {
     std::vector<VpModel::Vertex> vertices {
         { { 0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f } },
         { { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f } },
         { { -0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f } }
     };
 
-    vpModel = std::make_unique<VpModel>(vpDevice, vertices);
+    auto vpModel = std::make_shared<VpModel>(vpDevice, vertices);
+
+    auto triangle = VpGameObject::createGameObject();
+    triangle.model = vpModel;
+    triangle.color = {.1f,.8f,.1f};
+    triangle.transform2d.translation.x = .2f;
+    triangle.transform2d.scale = {2.f,.5f};
+    triangle.transform2d.rotation = .25f * glm::two_pi<float>();
+    gameObjects.push_back(std::move(triangle));
 }
 
 void MainApp::createPipelineLayout() {
+    VkPushConstantRange pushConstantRange { };
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(SimplePushConstantData);
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo { };
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 0;
     pipelineLayoutInfo.pSetLayouts = nullptr;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
     if (vkCreatePipelineLayout(vpDevice.device(), &pipelineLayoutInfo, nullptr,
             &pipelineLayout)
         != VK_SUCCESS) {
@@ -71,7 +101,7 @@ void MainApp::recreateSwapChain() {
         vpSwapChain = std::make_unique<VpSwapChain>(vpDevice, extent);
     } else {
         vpSwapChain = std::make_unique<VpSwapChain>(vpDevice, extent, std::move(vpSwapChain));
-        if(vpSwapChain->imageCount() != commandBuffers.size()) {
+        if (vpSwapChain->imageCount() != commandBuffers.size()) {
             freeCommandBuffers();
             createCommandBuffers();
         }
@@ -137,15 +167,33 @@ void MainApp::recordCommandBuffer(int imageIndex) {
     vkCmdSetViewport(commandBuffers[imageIndex], 0, 1, &viewport);
     vkCmdSetScissor(commandBuffers[imageIndex], 0, 1, &scissor);
 
-    vpPipeline->bind(commandBuffers[imageIndex]);
-    vpModel->bind(commandBuffers[imageIndex]);
-    vpModel->draw(commandBuffers[imageIndex]);
+    renderGameObjects(commandBuffers[imageIndex]);
+
 
     vkCmdEndRenderPass(commandBuffers[imageIndex]);
     if (vkEndCommandBuffer(commandBuffers[imageIndex]) != VK_SUCCESS) {
         throw std::runtime_error("failed to record comand buffer");
     }
 }
+
+void MainApp::renderGameObjects(VkCommandBuffer commandBuffer){
+    vpPipeline->bind(commandBuffer);
+
+    for(auto& obj : gameObjects){
+
+        obj.transform2d.rotation = glm::mod(obj.transform2d.rotation + 0.01f, glm::two_pi<float>());
+
+        SimplePushConstantData push{};
+        push.offset = obj.transform2d.translation;
+        push.color = obj.color;
+        push.transform = obj.transform2d.mat2();
+        vkCmdPushConstants(commandBuffer,pipelineLayout,VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,0, sizeof(SimplePushConstantData),&push);
+        obj.model->bind(commandBuffer);
+        obj.model->draw(commandBuffer);
+    }
+}
+
+
 
 void MainApp::drawFrame() {
     uint32_t imageIndex;
