@@ -5,8 +5,7 @@
 
 #include "vp_device.hpp"
 #include "vp_game_object.hpp"
-#include "vp_pipeline.hpp"
-#include "vp_swap_chain.hpp"
+#include "vp_renderer.hpp"
 #include "vp_window.hpp"
 
 namespace vp {
@@ -25,21 +24,10 @@ public:
 
 private:
     void loadGameObjects();
-    void createPipelineLayout();
-    void createPipeline();
-    void createCommandBuffers();
-    void freeCommandBuffers();
-    void drawFrame();
-    void recreateSwapChain();
-    void recordCommandBuffer(int imageIndex);
-    void renderGameObjects(VkCommandBuffer commandBuffer);
 
     VpWindow vpWindow { WIDTH, HEIGHT, "Hello Vulkan!" };
     VpDevice vpDevice { vpWindow };
-    std::unique_ptr<VpSwapChain> vpSwapChain;
-    std::unique_ptr<VpPipeline> vpPipeline;
-    VkPipelineLayout pipelineLayout;
-    std::vector<VkCommandBuffer> commandBuffers;
+    VpRenderer vpRenderer { vpWindow, vpDevice };
     std::vector<VpGameObject> gameObjects;
 };
 } // namespace vp
