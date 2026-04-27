@@ -14,12 +14,12 @@
 namespace vp {
 
 struct SimplePushConstantData {
-    glm::mat2 transform { 1.0f };
-    glm::vec2 offset;
+    glm::mat4 transform { 1.0f };
     alignas(16) glm::vec3 color;
 };
 
-SimpleRenderSystem::SimpleRenderSystem(VpDevice &device, VkRenderPass renderPass)  : vpDevice{device} {    
+SimpleRenderSystem::SimpleRenderSystem(VpDevice& device, VkRenderPass renderPass)
+    : vpDevice { device } {
     createPipelineLayout();
     createPipeline(renderPass);
 }
@@ -52,24 +52,26 @@ void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
 
     PipelineConfigInfo pipelineConfig { };
     VpPipeline::defaultPipelineConfigInfo(pipelineConfig);
-    pipelineConfig.renderPass = renderPass;
+    pipelineConfig.renderPass = renderPass; 
     pipelineConfig.pipelineLayout = pipelineLayout;
     vpPipeline = std::make_unique<VpPipeline>(
         vpDevice, "shaders/simple_shader.vert.spv",
         "shaders/simple_shader.frag.spv", pipelineConfig);
 }
 
-void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, std::vector<VpGameObject> &gameObjects) {
+void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, std::vector<VpGameObject>& gameObjects, const VpCamera& camera) {
     vpPipeline->bind(commandBuffer);
+
+    auto projectionView = camera.getProjection() * camera.getView();
 
     for (auto& obj : gameObjects) {
 
-        obj.transform2d.rotation = glm::mod(obj.transform2d.rotation + 0.01f, glm::two_pi<float>());
-
+        obj.transform.rotation.y = glm::mod(obj.transform.rotation.y + 0.01f, glm::two_pi<float>());
+        obj.transform.rotation.x = glm::mod(obj.transform.rotation.x + 0.01f, glm::two_pi<float>());
         SimplePushConstantData push { };
-        push.offset = obj.transform2d.translation;
+
         push.color = obj.color;
-        push.transform = obj.transform2d.mat2();
+        push.transform = projectionView * obj.transform.mat4();
         vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(SimplePushConstantData), &push);
         obj.model->bind(commandBuffer);
         obj.model->draw(commandBuffer);

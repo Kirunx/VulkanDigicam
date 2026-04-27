@@ -17,7 +17,10 @@ public:
     VpRenderer(const VpRenderer&) = delete;
     VpRenderer& operator=(const VpRenderer&) = delete;
 
-    VkRenderPass getSwapChainRenderPass() const {return vpSwapChain->getRenderPass(); }
+    VkRenderPass getSwapChainRenderPass() const { return vpSwapChain->getRenderPass(); }
+    float getAspectRation() const {
+        return vpSwapChain->extentAspectRatio();
+    }
     bool isFrameInProgress() const { return isFrameStarted; }
 
     VkCommandBuffer getCurrentCommandBuffer() const {
@@ -46,7 +49,7 @@ private:
     std::vector<VkCommandBuffer> commandBuffers;
 
     uint32_t currentImageIndex;
-    int currentFrameIndex{0};
+    int currentFrameIndex { 0 };
     bool isFrameStarted { false };
 };
 } // namespace vp
