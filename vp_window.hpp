@@ -19,6 +19,8 @@ class VpWindow {
     bool wasWindowResized() {return framebufferResized;}
     void resetWindowResizedFlag() {framebufferResized = false;}
 
+    GLFWwindow *getGlWFwindow() const {return window;} 
+
     void createWindowSurface(VkInstance instance, VkSurfaceKHR* surface);
 
    private:

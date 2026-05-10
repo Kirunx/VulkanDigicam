@@ -14,7 +14,7 @@ namespace vp {
 
 class VpSwapChain {
 public:
-    static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+    static constexpr int MAX_FRAMES_IN_FLIGHT = 3;
 
     VpSwapChain(VpDevice& deviceRef, VkExtent2D windowExtent);
     VpSwapChain(VpDevice& deviceRef, VkExtent2D windowExtent, std::shared_ptr<VpSwapChain> previous);

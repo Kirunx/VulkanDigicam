@@ -8,6 +8,7 @@
 #include "vp_device.hpp"
 #include "vp_game_object.hpp"
 #include "vp_pipeline.hpp"
+#include "vp_frame_info.hpp"
 
 
 namespace vp {
@@ -18,7 +19,7 @@ public:
 
     SimpleRenderSystem(const SimpleRenderSystem&) = delete;
     SimpleRenderSystem& operator=(const SimpleRenderSystem&) = delete;
-    void renderGameObjects(VkCommandBuffer commandBuffer, std::vector<VpGameObject> &gameObjects, const VpCamera &camera);
+    void renderGameObjects(FrameInfo& frameInfo,std::vector<VpGameObject> &gameObjects );
 
 private:
     void createPipelineLayout();

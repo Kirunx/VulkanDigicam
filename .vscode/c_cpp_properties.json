@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "name":"Arch",
+            "includePath": [
+                "/home/endos/Documents/VulkanProjects/libs/tinyObjLoader/"
+            ],
+            "intelliSenseMode": "linux-gcc-x64",
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c17",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
