@@ -1,4 +1,0 @@
-/home/endos/Documents/VulkanProjects/Photography/build/CMakeFiles/VulkanPhotography.dir
-/home/endos/Documents/VulkanProjects/Photography/build/CMakeFiles/Shaders.dir
-/home/endos/Documents/VulkanProjects/Photography/build/CMakeFiles/edit_cache.dir
-/home/endos/Documents/VulkanProjects/Photography/build/CMakeFiles/rebuild_cache.dir

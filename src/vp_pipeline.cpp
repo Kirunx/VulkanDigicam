@@ -72,8 +72,8 @@ void VpPipeline::createGraphicsPipeline(const std::string& vertFilepath,
     shaderStages[1].pNext = nullptr;
     shaderStages[1].pSpecializationInfo = nullptr;
 
-    auto bindingDescriptions = VpModel::Vertex::getBindingDescriptions();
-    auto attributeDescriptions = VpModel::Vertex::getAttributeDescriptions();
+    auto& bindingDescriptions = configInfo.bingingDescriptions;
+    auto& attributeDescriptions = configInfo.attributeDescriptions;
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo {};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -190,6 +190,9 @@ void VpPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
     configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
     configInfo.dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
     configInfo.dynamicStateInfo.flags = 0;
+
+    configInfo.bingingDescriptions = VpModel::Vertex::getBindingDescriptions();
+    configInfo.attributeDescriptions = VpModel::Vertex::getAttributeDescriptions();
 
 }
 void VpPipeline::bind(VkCommandBuffer commandBuffer) {

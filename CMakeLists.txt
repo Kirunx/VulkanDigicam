@@ -97,10 +97,19 @@ if (WIN32)
   target_link_libraries(${PROJECT_NAME} glfw3 vulkan-1)
 elseif (UNIX)
     message(STATUS "CREATING BUILD FOR UNIX")
-    target_include_directories(${PROJECT_NAME} PUBLIC
-      ${PROJECT_SOURCE_DIR}/src
-      ${TINYOBJ_PATH}
+    file(GLOB_RECURSE ALL_SRC_DIRS LIST_DIRECTORIES true "${PROJECT_SOURCE_DIR}/src/*")
+    
+    target_include_directories(${PROJECT_NAME} PUBLIC 
+        ${PROJECT_SOURCE_DIR}/src 
+        ${TINYOBJ_PATH}
     )
+
+    foreach(DIR ${ALL_SRC_DIRS})
+        if(IS_DIRECTORY ${DIR})
+            target_include_directories(${PROJECT_NAME} PUBLIC ${DIR})
+        endif()
+    endforeach()
+
     target_link_libraries(${PROJECT_NAME} glfw ${Vulkan_LIBRARIES})
 endif()
 

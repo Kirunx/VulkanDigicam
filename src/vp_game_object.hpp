@@ -22,6 +22,10 @@ struct TransformComponent {
         
 };
 
+struct PointLightComponent {
+    float lightIntensity = 1.0f;
+};
+
 class VpGameObject {
 public:
     using id_t = unsigned int;
@@ -30,6 +34,9 @@ public:
         static id_t currentId = 0;
         return VpGameObject { currentId++ };
     }
+
+    static VpGameObject makePointLight(float intensity = 10.0f, float radius = 0.1f, glm::vec3 color = glm::vec3(1.f));
+
     VpGameObject(const VpGameObject&) = delete;
     VpGameObject& operator=(const VpGameObject&) = delete;
     VpGameObject(VpGameObject&&) = default;
@@ -38,9 +45,12 @@ public:
     const id_t getId() {
         return id;
     }
-    std::shared_ptr<VpModel> model { };
     glm::vec3 color { };    
     TransformComponent transform { };
+
+    // Optional components
+    std::shared_ptr<VpModel> model { };
+    std::unique_ptr<PointLightComponent> pointLight = nullptr;
 
 private:
     VpGameObject(id_t objId)

@@ -3,7 +3,8 @@
         {
             "name":"Arch",
             "includePath": [
-                "/home/endos/Documents/VulkanProjects/libs/tinyObjLoader/"
+                "/home/endos/Documents/VulkanProjects/libs/tinyObjLoader/",
+                "${workspaceFolder}/**"
             ],
             "intelliSenseMode": "linux-gcc-x64",
             "compilerPath": "/usr/bin/clang",

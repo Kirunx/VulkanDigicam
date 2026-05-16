@@ -39,22 +39,23 @@ glm::mat3 TransformComponent::normalMatrix() {
     const float s1 = glm::sin(rotation.y);
     glm::vec3 invScale = 1.0f / scale;
     return glm::mat3 {
-        {
-            invScale.x * (c1 * c3 + s1 * s2 * s3),
+        { invScale.x * (c1 * c3 + s1 * s2 * s3),
             invScale.x * (c2 * s3),
-            invScale.x * (c1 * s2 * s3 - c3 * s1)
-        },
-        {
-            invScale.y * (c3 * s1 * s2 - c1 * s3),
+            invScale.x * (c1 * s2 * s3 - c3 * s1) },
+        { invScale.y * (c3 * s1 * s2 - c1 * s3),
             invScale.y * (c2 * c3),
-            invScale.y * (c1 * c3 * s2 + s1 * s3)
-        },
-        {
-            invScale.z * (c2 * s1),
+            invScale.y * (c1 * c3 * s2 + s1 * s3) },
+        { invScale.z * (c2 * s1),
             invScale.z * (-s2),
-            invScale.z * (c1 * c2)
-        }
+            invScale.z * (c1 * c2) }
     };
 }
-
+VpGameObject VpGameObject::makePointLight(float intencity, float radius, glm::vec3 color) {
+    VpGameObject gameObj  = VpGameObject::createGameObject();
+    gameObj.color = color;
+    gameObj.transform.scale.x = radius;
+    gameObj.pointLight = std::make_unique<PointLightComponent>();
+    gameObj.pointLight->lightIntensity = intencity;
+    return gameObj;
+}
 }
