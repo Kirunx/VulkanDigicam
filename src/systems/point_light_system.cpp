@@ -9,6 +9,7 @@
 // std
 #include <array>
 #include <iostream>
+#include <map>
 #include <stdexcept>
 
 namespace vp {
@@ -55,6 +56,7 @@ void PointLightSystem::createPipeline(VkRenderPass renderPass) {
 
     PipelineConfigInfo pipelineConfig { };
     VpPipeline::defaultPipelineConfigInfo(pipelineConfig);
+    VpPipeline::enableAlphaBlending(pipelineConfig);
     pipelineConfig.attributeDescriptions.clear();
     pipelineConfig.bingingDescriptions.clear();
     pipelineConfig.renderPass = renderPass;
@@ -71,12 +73,13 @@ void PointLightSystem::update(FrameInfo& frameInfo, GlobalUbo& ubo) {
     auto rotateLight = glm::rotate(glm::mat4(1.f), frameInfo.frameTime, { 0.f, -1.f, 0.f });
     for (auto& kv : frameInfo.gameObjects) {
         auto& obj = kv.second;
-        if (obj.pointLight == nullptr)  continue;
+        if (obj.pointLight == nullptr)
+            continue;
 
-        assert (lightIndex < MAX_LIGHTS && "Point lights exceeded maxium light capacity");
+        assert(lightIndex < MAX_LIGHTS && "Point lights exceeded maxium light capacity");
 
-        obj.transform.translation = glm::vec3(rotateLight *  glm::vec4(obj.transform.translation, 1.0));
-        
+        obj.transform.translation = glm::vec3(rotateLight * glm::vec4(obj.transform.translation, 1.0));
+
         ubo.pointLights[lightIndex].position = glm::vec4(obj.transform.translation, 1.0);
         ubo.pointLights[lightIndex].color = glm::vec4(obj.color, obj.pointLight->lightIntensity);
         lightIndex += 1;
@@ -85,8 +88,18 @@ void PointLightSystem::update(FrameInfo& frameInfo, GlobalUbo& ubo) {
 }
 
 void PointLightSystem::render(FrameInfo& frameInfo) {
-    vpPipeline->bind(frameInfo.commandBuffer);
+    std::map<float, VpGameObject::id_t> sorted;
 
+    vpPipeline->bind(frameInfo.commandBuffer);
+    for (auto& kv : frameInfo.gameObjects) {
+        auto& obj = kv.second;
+        if (obj.pointLight == nullptr)
+            continue;
+
+        auto offset = frameInfo.camera.getPosition() - obj.transform.translation;
+        float disSquared = glm::dot(offset, offset);
+        sorted[disSquared] = obj.getId();
+    }
     vkCmdBindDescriptorSets(
         frameInfo.commandBuffer,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -94,13 +107,12 @@ void PointLightSystem::render(FrameInfo& frameInfo) {
         0,
         1,
         &frameInfo.globalDescriptorSet,
-        0, 
+        0,
         nullptr);
 
-    for (auto& kv : frameInfo.gameObjects) {
-        auto& obj = kv.second;
-        if (obj.pointLight == nullptr)
-            continue;
+    for (auto it = sorted.rbegin(); it != sorted.rend(); ++it) {
+        auto& obj = frameInfo.gameObjects.at(it->second);
+
         PointLightPushConstants push { };
         push.position = glm::vec4(obj.transform.translation, 1.0f);
         push.color = glm::vec4(obj.color, obj.pointLight->lightIntensity);
@@ -111,8 +123,7 @@ void PointLightSystem::render(FrameInfo& frameInfo) {
             VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
             0,
             sizeof(PointLightPushConstants),
-            &push
-        );
+            &push);
         vkCmdDraw(frameInfo.commandBuffer, 6, 1, 0, 0);
     }
 }

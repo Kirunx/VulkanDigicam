@@ -8,6 +8,7 @@
 namespace vp {
 
 struct PipelineConfigInfo {
+    PipelineConfigInfo() = default;
     PipelineConfigInfo(const PipelineConfigInfo&) = delete;
     PipelineConfigInfo& operator=(const PipelineConfigInfo&) = delete;
 
@@ -54,6 +55,7 @@ public:
     VpPipeline() = default;
 
     static void defaultPipelineConfigInfo(PipelineConfigInfo &configInfo);
+    static void enableAlphaBlending(PipelineConfigInfo &configInfo);
 
     void bind(VkCommandBuffer commandBuffer);
 };

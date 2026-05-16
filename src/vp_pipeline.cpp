@@ -75,14 +75,14 @@ void VpPipeline::createGraphicsPipeline(const std::string& vertFilepath,
     auto& bindingDescriptions = configInfo.bingingDescriptions;
     auto& attributeDescriptions = configInfo.attributeDescriptions;
 
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo {};
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo { };
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
     vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescriptions.size());
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
     vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
 
-    VkGraphicsPipelineCreateInfo pipelineInfo {};
+    VkGraphicsPipelineCreateInfo pipelineInfo { };
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineInfo.stageCount = 2;
     pipelineInfo.pStages = shaderStages;
@@ -111,7 +111,7 @@ void VpPipeline::createGraphicsPipeline(const std::string& vertFilepath,
 }
 void VpPipeline::createShaderModule(const std::vector<char>& code,
     VkShaderModule* shaderModule) {
-    VkShaderModuleCreateInfo createInfo {};
+    VkShaderModuleCreateInfo createInfo { };
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
@@ -122,7 +122,7 @@ void VpPipeline::createShaderModule(const std::vector<char>& code,
         throw std::runtime_error("failed to create shader module");
     }
 }
-void VpPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
+void VpPipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo) {
 
     configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -133,7 +133,6 @@ void VpPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
     configInfo.viewportInfo.pViewports = nullptr;
     configInfo.viewportInfo.scissorCount = 1;
     configInfo.viewportInfo.pScissors = nullptr;
-
 
     configInfo.rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     configInfo.rasterizationInfo.depthClampEnable = VK_FALSE;
@@ -182,10 +181,10 @@ void VpPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
     configInfo.depthStencilInfo.minDepthBounds = 0.0f; // Optional
     configInfo.depthStencilInfo.maxDepthBounds = 1.0f; // Optional
     configInfo.depthStencilInfo.stencilTestEnable = VK_FALSE;
-    configInfo.depthStencilInfo.front = {}; // Optional
-    configInfo.depthStencilInfo.back = {}; // Optional
+    configInfo.depthStencilInfo.front = { }; // Optional
+    configInfo.depthStencilInfo.back = { }; // Optional
 
-    configInfo.dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT,VK_DYNAMIC_STATE_SCISSOR};
+    configInfo.dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     configInfo.dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
     configInfo.dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
@@ -193,9 +192,19 @@ void VpPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo) {
 
     configInfo.bingingDescriptions = VpModel::Vertex::getBindingDescriptions();
     configInfo.attributeDescriptions = VpModel::Vertex::getAttributeDescriptions();
-
 }
 void VpPipeline::bind(VkCommandBuffer commandBuffer) {
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+}
+
+void VpPipeline::enableAlphaBlending(PipelineConfigInfo& configInfo) {
+    configInfo.colorBlendAttachment.blendEnable = VK_TRUE;
+    configInfo.colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    configInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    configInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    configInfo.colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
+    configInfo.colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+    configInfo.colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+    configInfo.colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
 }
 } // namespace vp
