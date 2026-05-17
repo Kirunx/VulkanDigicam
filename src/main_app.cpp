@@ -3,6 +3,7 @@
 #include "keyboard_movement_controller.hpp"
 #include "systems/point_light_system.hpp"
 #include "systems/simple_render_system.hpp"
+#include "systems/texture_render_system.hpp"
 #include "vp_buffer.hpp"
 #include "vp_camera.hpp"
 
@@ -16,6 +17,7 @@
 #include <array>
 #include <cassert>
 #include <chrono>
+#include <iostream>
 #include <stdexcept>
 
 namespace vp {
@@ -25,6 +27,18 @@ MainApp::MainApp() {
                      .setMaxSets(VpSwapChain::MAX_FRAMES_IN_FLIGHT)
                      .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VpSwapChain::MAX_FRAMES_IN_FLIGHT)
                      .build();
+
+    // build frame descriptor pools
+    framePools.resize(VpSwapChain::MAX_FRAMES_IN_FLIGHT);
+    auto framePoolBuilder = VpDescriptorPool::Builder(vpDevice)
+                                .setMaxSets(1000)
+                                .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000)
+                                .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000)
+                                .setPoolFlags(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT);
+    for (int i = 0; i < framePools.size(); i++) {
+        framePools[i] = framePoolBuilder.build();
+    }
+
     loadGameObjects();
 }
 
@@ -54,6 +68,9 @@ void MainApp::run() {
             .build(globalDescriptorSets[i]);
     }
 
+    std::cout << "Alignment: " << vpDevice.properties.limits.minUniformBufferOffsetAlignment << "\n";
+    std::cout << "atom size: " << vpDevice.properties.limits.nonCoherentAtomSize << "\n";
+
     SimpleRenderSystem simpleRenderSystem {
         vpDevice,
         vpRenderer.getSwapChainRenderPass(),
@@ -64,9 +81,14 @@ void MainApp::run() {
         vpRenderer.getSwapChainRenderPass(),
         globalSetLayout->getDescriptorSetLayout()
     };
+    TextureRenderSystem textureRenderSystem {
+        vpDevice,
+        vpRenderer.getSwapChainRenderPass(),
+        globalSetLayout->getDescriptorSetLayout()
+    };
     VpCamera camera { };
 
-    auto viewerObject = VpGameObject::createGameObject();
+    auto& viewerObject = gameObjectManager.createGameObject();
     viewerObject.transform.translation.z = -2.5f;
     KeyboardMovementController cameraController { };
 
@@ -78,7 +100,7 @@ void MainApp::run() {
         float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
 
-        cameraController.moveInPlaneXZ(vpWindow.getGlFWwindow(), frameTime, viewerObject);
+        cameraController.moveInPlaneXZ(vpWindow.getGLFWwindow(), frameTime, viewerObject);
         camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
 
         float aspect = vpRenderer.getAspectRatio();
@@ -86,13 +108,15 @@ void MainApp::run() {
 
         if (auto commandBuffer = vpRenderer.beginFrame()) {
             int frameIndex = vpRenderer.getFrameIndex();
+            framePools[frameIndex]->resetPool();
             FrameInfo frameInfo {
                 frameIndex,
                 frameTime,
                 commandBuffer,
                 camera,
                 globalDescriptorSets[frameIndex],
-                gameObjects
+                *framePools[frameIndex],
+                gameObjectManager.gameObjects
             };
 
             // update
@@ -104,10 +128,18 @@ void MainApp::run() {
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
             uboBuffers[frameIndex]->flush();
 
+            // final step of update is updating the game objects buffer data
+            // The render functions MUST not change a game objects transform data
+            gameObjectManager.updateBuffer(frameIndex);
+
             // render
             vpRenderer.beginSwapChainRenderPass(commandBuffer);
+
+            // order here matters
+            textureRenderSystem.renderGameObjects(frameInfo);
             simpleRenderSystem.renderGameObjects(frameInfo);
             pointLightSystem.render(frameInfo);
+
             vpRenderer.endSwapChainRenderPass(commandBuffer);
             vpRenderer.endFrame();
         }
@@ -118,25 +150,24 @@ void MainApp::run() {
 
 void MainApp::loadGameObjects() {
     std::shared_ptr<VpModel> vpModel = VpModel::createModelFromFile(vpDevice, "models/flat_vase.obj");
-    auto flatVase = VpGameObject::createGameObject();
+    auto& flatVase = gameObjectManager.createGameObject();
     flatVase.model = vpModel;
     flatVase.transform.translation = { -.5f, .5f, 0.f };
     flatVase.transform.scale = { 3.f, 1.5f, 3.f };
-    gameObjects.emplace(flatVase.getId(), std::move(flatVase));
 
     vpModel = VpModel::createModelFromFile(vpDevice, "models/smooth_vase.obj");
-    auto smoothVase = VpGameObject::createGameObject();
+    auto& smoothVase = gameObjectManager.createGameObject();
     smoothVase.model = vpModel;
     smoothVase.transform.translation = { .5f, .5f, 0.f };
     smoothVase.transform.scale = { 3.f, 1.5f, 3.f };
-    gameObjects.emplace(smoothVase.getId(), std::move(smoothVase));
 
     vpModel = VpModel::createModelFromFile(vpDevice, "models/quad.obj");
-    auto floor = VpGameObject::createGameObject();
+    std::shared_ptr<VpTexture> marbleTexture = VpTexture::createTextureFromFile(vpDevice, "../textures/image.png");
+    auto& floor = gameObjectManager.createGameObject();
     floor.model = vpModel;
+    floor.diffuseMap = marbleTexture;
     floor.transform.translation = { 0.f, .5f, 0.f };
     floor.transform.scale = { 3.f, 1.f, 3.f };
-    gameObjects.emplace(floor.getId(), std::move(floor));
 
     std::vector<glm::vec3> lightColors {
         { 1.f, .1f, .1f },
@@ -147,13 +178,14 @@ void MainApp::loadGameObjects() {
         { 1.f, 1.f, 1.f } //
     };
 
-    for (int i = 0; i < lightColors.size(); ++i) {
-
-        auto pointLight = VpGameObject::makePointLight(0.6f);
+    for (int i = 0; i < lightColors.size(); i++) {
+        auto& pointLight = gameObjectManager.makePointLight(0.2f);
         pointLight.color = lightColors[i];
-        auto rotateLight = glm::rotate(glm::mat4(1.f), (i * glm::two_pi<float>()) / lightColors.size(), { 0.f, -1.f, 0.f });
+        auto rotateLight = glm::rotate(
+            glm::mat4(1.f),
+            (i * glm::two_pi<float>()) / lightColors.size(),
+            { 0.f, -1.f, 0.f });
         pointLight.transform.translation = glm::vec3(rotateLight * glm::vec4(-1.f, -1.f, -1.f, 1.f));
-        gameObjects.emplace(pointLight.getId(), std::move(pointLight));
     }
 }
 

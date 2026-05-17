@@ -12,27 +12,28 @@
 
 namespace vp {
 class MainApp {
- public:
-  static constexpr int WIDTH = 800;
-  static constexpr int HEIGHT = 600;
+public:
+    static constexpr int WIDTH = 800;
+    static constexpr int HEIGHT = 600;
 
-  MainApp();
-  ~MainApp();
+    MainApp();
+    ~MainApp();
 
-  MainApp(const MainApp &) = delete;
-  MainApp &operator=(const MainApp &) = delete;
+    MainApp(const MainApp&) = delete;
+    MainApp& operator=(const MainApp&) = delete;
 
-  void run();
+    void run();
 
- private:
-  void loadGameObjects();
+private:
+    void loadGameObjects();
 
-  VpWindow vpWindow{WIDTH, HEIGHT, "Vulkan Tutorial"};
-  VpDevice vpDevice{vpWindow};
-  VpRenderer vpRenderer{vpWindow, vpDevice};
+    VpWindow vpWindow { WIDTH, HEIGHT, "Vulkan Tutorial" };
+    VpDevice vpDevice { vpWindow };
+    VpRenderer vpRenderer { vpWindow, vpDevice };
 
-  // note: order of declarations matters
-  std::unique_ptr<VpDescriptorPool> globalPool{};
-  VpGameObject::Map gameObjects;
+    // note: order of declarations matters
+    std::unique_ptr<VpDescriptorPool> globalPool { };
+    std::vector<std::unique_ptr<VpDescriptorPool>> framePools;
+    VpGameObjectManager gameObjectManager { vpDevice };
 };
-}  // namespace vp
+} // namespace vp

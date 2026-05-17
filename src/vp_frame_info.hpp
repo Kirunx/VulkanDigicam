@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vp_camera.hpp"
+#include "vp_descriptors.hpp"
 #include "vp_game_object.hpp"
 // lib
 #include <vulkan/vulkan.h>
@@ -28,6 +29,7 @@ struct FrameInfo {
     VkCommandBuffer commandBuffer;
     VpCamera& camera;
     VkDescriptorSet globalDescriptorSet;
+    VpDescriptorPool &frameDescriptorPool;
     VpGameObject::Map& gameObjects;
 };
 

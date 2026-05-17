@@ -1,6 +1,9 @@
 #include "vp_game_object.hpp"
 
+#include <numeric>
+
 namespace vp {
+
 glm::mat4 TransformComponent::mat4() {
     const float c3 = glm::cos(rotation.z);
     const float s3 = glm::sin(rotation.z);
@@ -30,6 +33,7 @@ glm::mat4 TransformComponent::mat4() {
         { translation.x, translation.y, translation.z, 1.0f }
     };
 }
+
 glm::mat3 TransformComponent::normalMatrix() {
     const float c3 = glm::cos(rotation.z);
     const float s3 = glm::sin(rotation.z);
@@ -37,25 +41,75 @@ glm::mat3 TransformComponent::normalMatrix() {
     const float s2 = glm::sin(rotation.x);
     const float c1 = glm::cos(rotation.y);
     const float s1 = glm::sin(rotation.y);
-    glm::vec3 invScale = 1.0f / scale;
+    const glm::vec3 invScale = 1.0f / scale;
+
     return glm::mat3 {
-        { invScale.x * (c1 * c3 + s1 * s2 * s3),
+        {
+            invScale.x * (c1 * c3 + s1 * s2 * s3),
             invScale.x * (c2 * s3),
-            invScale.x * (c1 * s2 * s3 - c3 * s1) },
-        { invScale.y * (c3 * s1 * s2 - c1 * s3),
+            invScale.x * (c1 * s2 * s3 - c3 * s1),
+        },
+        {
+            invScale.y * (c3 * s1 * s2 - c1 * s3),
             invScale.y * (c2 * c3),
-            invScale.y * (c1 * c3 * s2 + s1 * s3) },
-        { invScale.z * (c2 * s1),
+            invScale.y * (c1 * c3 * s2 + s1 * s3),
+        },
+        {
+            invScale.z * (c2 * s1),
             invScale.z * (-s2),
-            invScale.z * (c1 * c2) }
+            invScale.z * (c1 * c2),
+        },
     };
 }
-VpGameObject VpGameObject::makePointLight(float intencity, float radius, glm::vec3 color) {
-    VpGameObject gameObj  = VpGameObject::createGameObject();
+
+VpGameObject& VpGameObjectManager::makePointLight(
+    float intensity, float radius, glm::vec3 color) {
+    auto& gameObj = createGameObject();
     gameObj.color = color;
     gameObj.transform.scale.x = radius;
     gameObj.pointLight = std::make_unique<PointLightComponent>();
-    gameObj.pointLight->lightIntensity = intencity;
+    gameObj.pointLight->lightIntensity = intensity;
     return gameObj;
 }
+
+VpGameObjectManager::VpGameObjectManager(VpDevice& device) {
+    // including nonCoherentAtomSize allows us to flush a specific index at once
+    int alignment = std::lcm(
+        device.properties.limits.nonCoherentAtomSize,
+        device.properties.limits.minUniformBufferOffsetAlignment);
+    for (int i = 0; i < uboBuffers.size(); i++) {
+        uboBuffers[i] = std::make_unique<VpBuffer>(
+            device,
+            sizeof(GameObjectBufferData),
+            VpGameObjectManager::MAX_GAME_OBJECTS,
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            alignment);
+        uboBuffers[i]->map();
+    }
+
+    textureDefault = VpTexture::createTextureFromFile(device, "../textures/missing.png");
 }
+
+void VpGameObjectManager::updateBuffer(int frameIndex) {
+    // copy model matrix and normal matrix for each gameObj into
+    // buffer for this frame
+    for (auto& kv : gameObjects) {
+        auto& obj = kv.second;
+        GameObjectBufferData data { };
+        data.modelMatrix = obj.transform.mat4();
+        data.normalMatrix = obj.transform.normalMatrix();
+        uboBuffers[frameIndex]->writeToIndex(&data, kv.first);
+    }
+    uboBuffers[frameIndex]->flush();
+}
+
+VkDescriptorBufferInfo VpGameObject::getBufferInfo(int frameIndex) {
+    return gameObjectManger.getBufferInfoForGameObject(frameIndex, id);
+}
+
+VpGameObject::VpGameObject(id_t objId, const VpGameObjectManager& manager)
+    : id { objId }
+    , gameObjectManger { manager } { }
+
+} // namespace vp

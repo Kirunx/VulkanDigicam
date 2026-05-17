@@ -27,5 +27,7 @@ private:
     VpDevice &vpDevice;
     std::unique_ptr<VpPipeline> vpPipeline;
     VkPipelineLayout pipelineLayout;
+
+    std::unique_ptr<VpDescriptorSetLayout> renderSystemLayout;
 };
 } // namespace vp

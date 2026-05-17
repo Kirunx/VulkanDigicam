@@ -4,6 +4,7 @@
             "name":"Arch",
             "includePath": [
                 "/home/endos/Documents/VulkanProjects/libs/tinyObjLoader/",
+                "/home/endos/Documents/VulkanProjects/Photography/external/stb_image",
                 "${workspaceFolder}/**"
             ],
             "intelliSenseMode": "linux-gcc-x64",
