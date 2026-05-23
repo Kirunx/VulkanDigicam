@@ -31,6 +31,7 @@ struct FrameInfo {
     VkDescriptorSet globalDescriptorSet;
     VpDescriptorPool &frameDescriptorPool;
     VpGameObject::Map& gameObjects;
+    VkExtent2D swapchainExtent;
 };
 
 } // namespace vp

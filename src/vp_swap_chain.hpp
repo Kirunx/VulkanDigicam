@@ -29,6 +29,7 @@ public:
     size_t imageCount() { return swapChainImages.size(); }
     VkFormat getSwapChainImageFormat() { return swapChainImageFormat; }
     VkExtent2D getSwapChainExtent() { return swapChainExtent; }
+    VkFormat getSwapChainDepthFormat() {return swapChainDepthFormat; }
     uint32_t width() { return swapChainExtent.width; }
     uint32_t height() { return swapChainExtent.height; }
 
@@ -86,4 +87,4 @@ private:
     size_t currentFrame = 0;
 };
 
-} // namespace lve
+} // namespace vp

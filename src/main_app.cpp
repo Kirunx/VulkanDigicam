@@ -2,7 +2,7 @@
 
 #include "keyboard_movement_controller.hpp"
 #include "systems/point_light_system.hpp"
-#include "systems/simple_render_system.hpp"
+#include "systems/post_processing_system.hpp"
 #include "systems/texture_render_system.hpp"
 #include "vp_buffer.hpp"
 #include "vp_camera.hpp"
@@ -71,20 +71,19 @@ void MainApp::run() {
     std::cout << "Alignment: " << vpDevice.properties.limits.minUniformBufferOffsetAlignment << "\n";
     std::cout << "atom size: " << vpDevice.properties.limits.nonCoherentAtomSize << "\n";
 
-    SimpleRenderSystem simpleRenderSystem {
-        vpDevice,
-        vpRenderer.getSwapChainRenderPass(),
-        globalSetLayout->getDescriptorSetLayout()
-    };
     PointLightSystem pointLightSystem {
         vpDevice,
-        vpRenderer.getSwapChainRenderPass(),
+        vpRenderer.getSceneRenderPass(),
         globalSetLayout->getDescriptorSetLayout()
     };
     TextureRenderSystem textureRenderSystem {
         vpDevice,
-        vpRenderer.getSwapChainRenderPass(),
+        vpRenderer.getSceneRenderPass(),
         globalSetLayout->getDescriptorSetLayout()
+    };
+    PostProcessRenderSystem postProcessSystem {
+        vpDevice,
+        vpRenderer.getSwapChainRenderPass()
     };
     VpCamera camera { };
 
@@ -116,7 +115,8 @@ void MainApp::run() {
                 camera,
                 globalDescriptorSets[frameIndex],
                 *framePools[frameIndex],
-                gameObjectManager.gameObjects
+                gameObjectManager.gameObjects,
+                vpRenderer.getSwapChainExtent()
             };
 
             // update
@@ -133,14 +133,16 @@ void MainApp::run() {
             gameObjectManager.updateBuffer(frameIndex);
 
             // render
-            vpRenderer.beginSwapChainRenderPass(commandBuffer);
-
-            // order here matters
+            vpRenderer.beginSceneRenderPass(commandBuffer);
             textureRenderSystem.renderGameObjects(frameInfo);
-            simpleRenderSystem.renderGameObjects(frameInfo);
             pointLightSystem.render(frameInfo);
+            vpRenderer.endSceneRenderPass(commandBuffer);
 
+            // === PASS 2: Apply Post-Processing to Swapchain ===
+            vpRenderer.beginSwapChainRenderPass(commandBuffer);
+            postProcessSystem.render(frameInfo, vpRenderer.getSceneColorView());
             vpRenderer.endSwapChainRenderPass(commandBuffer);
+
             vpRenderer.endFrame();
         }
     }
@@ -179,7 +181,7 @@ void MainApp::loadGameObjects() {
     };
 
     for (int i = 0; i < lightColors.size(); i++) {
-        auto& pointLight = gameObjectManager.makePointLight(0.2f);
+        auto& pointLight = gameObjectManager.makePointLight(0.6f);
         pointLight.color = lightColors[i];
         auto rotateLight = glm::rotate(
             glm::mat4(1.f),
