@@ -1,6 +1,7 @@
 #include "main_app.hpp"
 
 #include "keyboard_movement_controller.hpp"
+#include "systems/bloom_smear_system.hpp"
 #include "systems/point_light_system.hpp"
 #include "systems/post_processing_system.hpp"
 #include "systems/texture_render_system.hpp"
@@ -85,25 +86,37 @@ void MainApp::run() {
         vpDevice,
         vpRenderer.getSwapChainRenderPass()
     };
+    BloomSmearSystem bloomSmearSystem {
+        vpDevice,
+        vpRenderer.getBloomRenderPass()
+    };
+    bloomSmearSystem.setThreshold(0.8f); 
+    bloomSmearSystem.setStreakLength(20.0f); 
+    bloomSmearSystem.setIntensity(2.0f);
+    bloomSmearSystem.setDirection(1.0f);
+
     VpCamera camera { };
 
     auto& viewerObject = gameObjectManager.createGameObject();
     viewerObject.transform.translation.z = -2.5f;
     KeyboardMovementController cameraController { };
-
+    float noiseTiming = 0.0f;
     auto currentTime = std::chrono::high_resolution_clock::now();
     while (!vpWindow.shouldClose()) {
         glfwPollEvents();
 
         auto newTime = std::chrono::high_resolution_clock::now();
+
         float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
-
+        noiseTiming += frameTime;
         cameraController.moveInPlaneXZ(vpWindow.getGLFWwindow(), frameTime, viewerObject);
         camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
 
         float aspect = vpRenderer.getAspectRatio();
         camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 100.f);
+
+        cameraController.zoom(vpWindow.getGLFWwindow(), postProcessSystem);
 
         if (auto commandBuffer = vpRenderer.beginFrame()) {
             int frameIndex = vpRenderer.getFrameIndex();
@@ -125,6 +138,7 @@ void MainApp::run() {
             ubo.view = camera.getView();
             ubo.inverseView = camera.getInverseView();
             pointLightSystem.update(frameInfo, ubo);
+            postProcessSystem.setTime(noiseTiming);
             uboBuffers[frameIndex]->writeToBuffer(&ubo);
             uboBuffers[frameIndex]->flush();
 
@@ -138,9 +152,14 @@ void MainApp::run() {
             pointLightSystem.render(frameInfo);
             vpRenderer.endSceneRenderPass(commandBuffer);
 
-            // === PASS 2: Apply Post-Processing to Swapchain ===
+            // PASS 2: Bloom Smear 
+            vpRenderer.beginBloomRenderPass(commandBuffer);
+            bloomSmearSystem.render(frameInfo, vpRenderer.getSceneColorView());
+            vpRenderer.endBloomRenderPass(commandBuffer);
+
+            // PASS 3: Post-Process 
             vpRenderer.beginSwapChainRenderPass(commandBuffer);
-            postProcessSystem.render(frameInfo, vpRenderer.getSceneColorView());
+            postProcessSystem.render(frameInfo, vpRenderer.getSceneColorView(), vpRenderer.getBloomView());
             vpRenderer.endSwapChainRenderPass(commandBuffer);
 
             vpRenderer.endFrame();
@@ -171,6 +190,32 @@ void MainApp::loadGameObjects() {
     floor.transform.translation = { 0.f, .5f, 0.f };
     floor.transform.scale = { 3.f, 1.f, 3.f };
 
+    glm::vec3 sceneScale = glm::vec3(0.2f, -0.2f, 0.2f);
+
+    vpModel = VpModel::createModelFromFile(vpDevice, "models/floor.obj");
+    auto& objected = gameObjectManager.createGameObject();
+    objected.model = vpModel;
+    objected.transform.translation = { 0.f, .0f, 0.f };
+    objected.transform.scale = sceneScale;
+
+    vpModel = VpModel::createModelFromFile(vpDevice, "models/other.obj");
+    auto& objected1 = gameObjectManager.createGameObject();
+    objected1.model = vpModel;
+    objected1.transform.translation = { 0.f, .0f, 0.f };
+    objected1.transform.scale = sceneScale;
+
+    vpModel = VpModel::createModelFromFile(vpDevice, "models/lamps.obj");
+    auto& objected2 = gameObjectManager.createGameObject();
+    objected2.model = vpModel;
+    objected2.transform.translation = { 0.f, .0f, 0.f };
+    objected2.transform.scale = sceneScale;
+
+    vpModel = VpModel::createModelFromFile(vpDevice, "models/leafs.obj");
+    auto& objected3 = gameObjectManager.createGameObject();
+    objected3.model = vpModel;
+    objected3.transform.translation = { 0.f, .0f, 0.f };
+    objected3.transform.scale = sceneScale;
+
     std::vector<glm::vec3> lightColors {
         { 1.f, .1f, .1f },
         { .1f, .1f, 1.f },
@@ -181,7 +226,7 @@ void MainApp::loadGameObjects() {
     };
 
     for (int i = 0; i < lightColors.size(); i++) {
-        auto& pointLight = gameObjectManager.makePointLight(0.6f);
+        auto& pointLight = gameObjectManager.makePointLight(2.6f);
         pointLight.color = lightColors[i];
         auto rotateLight = glm::rotate(
             glm::mat4(1.f),

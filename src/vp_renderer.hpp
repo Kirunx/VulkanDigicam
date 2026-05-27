@@ -2,8 +2,8 @@
 // std
 #include <cassert>
 #include <memory>
-#include <vector>
 #include <stdexcept>
+#include <vector>
 
 #include "vp_device.hpp"
 #include "vp_swap_chain.hpp"
@@ -43,11 +43,18 @@ public:
     void endSceneRenderPass(VkCommandBuffer commandBuffer);
     void recreateSceneRenderTarget();
 
+    void beginBloomRenderPass(VkCommandBuffer commandBuffer);
+    void endBloomRenderPass(VkCommandBuffer commandBuffer);
+
     VkRenderPass getSceneRenderPass() const { return sceneTarget.renderPass; }
     VkFramebuffer getSceneFramebuffer() const { return sceneTarget.framebuffer; }
     VkImageView getSceneColorView() const { return sceneTarget.colorImageView; }
 
     VkExtent2D getSwapChainExtent() const { return vpSwapChain->getSwapChainExtent(); }
+
+    VkRenderPass getBloomRenderPass() const { return bloomTarget.renderPass; }
+    VkFramebuffer getBloomFramebuffer() const { return bloomTarget.framebuffer; }
+    VkImageView getBloomView() const { return bloomTarget.imageView; }
 
 private:
     void createCommandBuffers();
@@ -76,6 +83,19 @@ private:
         VkRenderPass renderPass = VK_NULL_HANDLE;
     };
     SceneTarget sceneTarget;
+
+    struct BloomTarget {
+        VkImage image = VK_NULL_HANDLE;
+        VkDeviceMemory imageMemory = VK_NULL_HANDLE;
+        VkImageView imageView = VK_NULL_HANDLE;
+        VkFramebuffer framebuffer = VK_NULL_HANDLE;
+        VkRenderPass renderPass = VK_NULL_HANDLE;
+    };
+    BloomTarget bloomTarget;
+
+    void createBloomRenderPass();
+    void createBloomTarget();
+    void cleanupBloomTarget();
 
     void createSceneRenderPass();
     void createSceneRenderTarget();

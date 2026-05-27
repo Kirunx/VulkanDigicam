@@ -1,5 +1,5 @@
 #pragma once
-
+#include "systems/post_processing_system.hpp"
 #include "vp_game_object.hpp"
 #include "vp_window.hpp"
 
@@ -17,10 +17,12 @@ public:
         int lookRight = GLFW_KEY_RIGHT;
         int lookUp = GLFW_KEY_UP;
         int lookDown = GLFW_KEY_DOWN;
+        int zoomIn = GLFW_KEY_EQUAL;
+        int zoomOut = GLFW_KEY_MINUS;
     };
 
     void moveInPlaneXZ(GLFWwindow* window, float dt, VpGameObject &gameObject);
-
+    void zoom(GLFWwindow* window, PostProcessRenderSystem &postProc);
     KeyMappings keys {};
     float moveSpeed{3.f};
     float lookSpeed{1.5f};

@@ -9,12 +9,12 @@
 namespace vp {
 
 struct PostProcessPushConstants {
-    glm::vec2 resolution;   // swapchain width/height
-    float ctr;              // contrast
-    float brt;              // brightness
-    float str;              // saturation
-    float zoom;             // zoom factor
-    float glowThreshold;    // placeholder
+    glm::vec2 resolution; // swapchain width/height
+    float ctr; // contrast
+    float brt; // brightness
+    float str; // saturation
+    float zoom; // zoom factor
+    float time;
 };
 
 class PostProcessRenderSystem {
@@ -25,24 +25,24 @@ public:
     PostProcessRenderSystem(const PostProcessRenderSystem&) = delete;
     PostProcessRenderSystem& operator=(const PostProcessRenderSystem&) = delete;
 
-    // Render post-process quad: sceneView = color attachment from off-screen pass
-    void render(FrameInfo& frameInfo, VkImageView sceneView);
+    void render(FrameInfo& frameInfo, VkImageView sceneView, VkImageView bloomView);
 
-    // Live parameter setters
     void setContrast(float v) { params.ctr = v; }
     void setBrightness(float v) { params.brt = v; }
     void setZoom(float v) { params.zoom = v; }
+    void setTime(float t) { params.time = t; }
+
+    float getZoom() const { return params.zoom; }
 
 private:
     void createPipelineLayout();
     void createPipeline(VkRenderPass renderPass);
-    void loadNoiseTexture();
 
     VpDevice& vpDevice;
     std::unique_ptr<VpPipeline> vpPipeline;
     VkPipelineLayout pipelineLayout;
     std::unique_ptr<VpDescriptorSetLayout> descriptorSetLayout;
-    std::unique_ptr<VpTexture> noiseTexture;
+    VkSampler postSampler;
     PostProcessPushConstants params;
 };
 
